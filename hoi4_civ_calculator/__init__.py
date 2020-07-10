@@ -1,3 +1,4 @@
+import copy
 civ_spd_base = 5
 task_cost = {'civ': 10800, 'civ_con': 9000, 'mil': 7200, 'mil_con': 4000, 
             'inf': 3000, 'doc': 6400, 'ref': 14500}
@@ -88,7 +89,9 @@ class ProdLine():
             
             self.progress -= cost
                 
-        print(self.state, self.task, 'progress', '{0:.2f}%'.format(self.progress/cost*100))
+        print(self.state, self.task, 'progress', '{0:.2f}%'.format(self.progress/cost*100),
+            'civ', self.num_civ, 'inf', inf[self.state][0], 'mod', 
+            ref(unique_spd_mod[self.task], day)+ref(speed_mod, day))
                                         
     def init_task(self, task):
         print('starting', task)
@@ -146,9 +149,9 @@ def init(speed_modp, unique_spd_modp, unique_cost_modp, free_stuffp, space_modp,
     free_stuff = free_stuffp
     space_mod = space_modp
     con_goods = con_goodsp
-    daily_reports = daily_reportsp.copy()
-    inf = infp.copy()
-    con_queue = con_queuep.copy()
+    daily_reports = copy.deepcopy(daily_reportsp)
+    inf = copy.deepcopy(infp)
+    con_queue = copy.deepcopy(con_queuep)
     final_day = final_dayp
 
     global temp_inf
