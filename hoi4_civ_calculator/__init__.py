@@ -90,8 +90,8 @@ class ProdLine():
             self.progress -= cost
                 
         print(self.state, self.task, 'progress', '{0:.2f}%'.format(self.progress/cost*100),
-            'civ', self.num_civ, 'inf', inf[self.state][0], 'mod', 
-            ref(unique_spd_mod[self.task], day)+ref(speed_mod, day))
+            'civ', self.num_civ, 'inf {0:.2f}'.format(inf[self.state][0]), 
+            'mod {0:.2f}'.format(ref(unique_spd_mod[self.task], day)+ref(speed_mod, day)))
                                         
     def init_task(self, task):
         print('starting', task)
