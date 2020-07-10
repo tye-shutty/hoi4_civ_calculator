@@ -100,6 +100,7 @@ def inc_con_good(day):
     
 def add_civ(day):
     daily_reports[-1]['civ'] += 1
+
     if not inc_con_good(day):
         if prod_lines[-1].num_civ < 15:
             prod_lines[-1].num_civ += 1
@@ -145,9 +146,9 @@ def init(speed_modp, unique_spd_modp, unique_cost_modp, free_stuffp, space_modp,
     free_stuff = free_stuffp
     space_mod = space_modp
     con_goods = con_goodsp
-    daily_reports = daily_reportsp
-    inf = infp
-    con_queue = con_queuep
+    daily_reports = daily_reportsp.copy()
+    inf = infp.copy()
+    con_queue = con_queuep.copy()
     final_day = final_dayp
 
     global temp_inf
@@ -177,9 +178,9 @@ def execute():
                 elif thing == 'inf':
                     for state in free_stuff[thing][day]:
                         inf[state][0] += free_stuff[thing][day][state]*0.1
-                        if inf[free_stuff[thing][day][state]][0] > 2:
+                        if inf[state][0] > 2:
                             print('you made too much inf in', state)
-                            inf[free_stuff[thing][day][state]][0] = 2
+                            inf[state][0] = 2
                 else:
                     add_other(thing)
                     
@@ -199,9 +200,8 @@ def execute():
                     remove_civ()
             
         if day%30==0:
-            print(daily_reports[-1])                    
-        daily_reports.append(daily_reports[-1])
-                
+            print('1',daily_reports[-1])     #180               
+        daily_reports.append(daily_reports[-1].copy())
         #don't make me program this for people who swap the order of production lines
         for line_i in range(len(prod_lines))[::-1]:
             prod_lines[line_i].construct(day)
