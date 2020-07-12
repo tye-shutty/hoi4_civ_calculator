@@ -101,7 +101,7 @@ calc.graph([inf_mil_1x, inf_mil_2x, mil_1x, mil_2x],
 Then send that data to graph(). In this case, I have sent 4 different results (must be inside a list). The second argument is a list of all the buildings I want to graph. The third variable is a list of all the labels for each result (in same order). The final argument is a list of time ratios for finding the area under the curves. For example, ```[0.4]``` would return the area for the last 40% of the graph.
 
 The above code produces the following output:
-![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/graphs/inf_mil.png)
+![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/temp2/graphs/inf_mil.png)
 
 | | 	1 inf then mil (1x con speed): mil |	1 inf then mil (2x con speed): mil |	mil (1x con speed): mil |	mil (2x con speed): mil |
 | - | - | -| - | - |
@@ -111,13 +111,13 @@ The above code produces the following output:
 - parameters include 0% consumer goods, and states with 100 building slots
 
 Some of the other sccenarios I have analyzed:
-![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/graphs/civ_14_15.png)
+![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/temp2/graphs/civ_14_15.png)
 - parameters include 2x construction speed, 0% consumer goods, and states with 100 building slots
 
-![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/graphs/civ_mil.png)
+![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/temp2/graphs/civ_mil.png)
 - parameters include 2x construction speed, 20% consumer goods, and states with 100 building slots
 
-![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/graphs/germany.png)
+![alt text](https://github.com/tye-shutty/hoi4_civ_calculator/temp2/graphs/germany.png)
 - parameters are designed to model Germany in 1936.
 
 All the code for these examples is provided in the jupyter notebooks.
