@@ -44,7 +44,7 @@ def make_queue(things_amounts):
     return con_queue
 
 def graph(scenarios, buildings, labels, area=[1]):
-    "area is ratio of time from the end date used in calculating the integral" 
+    "area is ratio of time from the end date used in calculating the area" 
     fig, ax = plt.subplots(figsize=(14, 9))
     data = {}
     for report_i in range(len(scenarios)):
@@ -54,20 +54,23 @@ def graph(scenarios, buildings, labels, area=[1]):
             data[labels[report_i]+': '+b] = {}
             for ratio in area:
                 days = int(len(scenarios[report_i])*ratio)
-                data[labels[report_i]+': '+b]['integral of last '+str(days)+' days'] = sum(y[-days:])
-                #print('scenario '+str(report_i)+' '+b,'integral of last',days,'days', sum(y[-days:]))
+                data[labels[report_i]+': '+b]['area of last '+str(days)+' days'] = sum(y[-days:])
+                #print('scenario '+str(report_i)+' '+b,'area of last',days,'days', sum(y[-days:]))
     plt.legend()
     plt.show()
     return pd.DataFrame(data)
 
 def find_task(day):
     "Only one line can work on a particular project in a particular state: eg. civ in moscow"
+    valid_task = False
+    task_i = 0
     for task_i in range(len(con_queue)):
         valid_task = True
         state = con_queue[task_i][1]
         limited = con_queue[task_i][0] not in ['inf', 'civ_con', 'mil_con']
-        if limited and int(inf[state][1] * ref(space_mod, day)) - inf[state][2] < 1:
-            print('no space for construction in', con_queue[task_i][1])
+        if limited and int(inf[state][1] * ref(space_modg, day)) - inf[state][2] < 1:
+            if debugg:
+                print('no space for construction in', con_queue[task_i][1])
             valid_task = False
         for line in prod_lines:
             if con_queue[task_i][0] == line.task and con_queue[task_i][1] == line.state:
@@ -82,9 +85,10 @@ def find_task(day):
         
 def continue_task(task, state, day):
     "returns True if matching task-state combos in the queue"
-    print(task,state,'space:',int(inf[state][1]*ref(space_mod,day)),'used',inf[state][2])
+    if debugg:
+        print(task,state,'space:',int(inf[state][1]*ref(space_modg,day)),'used',inf[state][2])
     unlimited = task in ['inf', 'civ_con', 'mil_con']
-    if unlimited or int(inf[state][1]*ref(space_mod,day)) - inf[state][2] > 0:
+    if unlimited or int(inf[state][1]*ref(space_modg,day)) - inf[state][2] > 0:
         try:
             con_queue.remove((task,state))
             #print('continuing', task, state)
@@ -105,16 +109,17 @@ class ProdLine():
         self.num_civ = num_civ
         
     def construct(self, day):
-        cost = task_cost[self.task]*ref(unique_cost_mod[self.task], day)
+        cost = task_cost[self.task]*ref(unique_cost_modg[self.task], day)
         spd_mod = ref(speed_mod, day)
-        spd_mod+=ref(unique_spd_mod[self.task], day)
+        spd_mod+=ref(unique_spd_modg[self.task], day)
         spd_mod*=inf[self.state][0] if self.task != 'inf' else 1
         #print(self.state, 'spd', spd_mod, inf[self.state][0])
         work = spd_mod*civ_spd_base*self.num_civ
         self.progress += work
         
         if self.progress >= cost:
-            print('completed', self.task, 'in', self.state)
+            if debugg:
+                print('completed', self.task, 'in', self.state)
             if self.task not in ['civ_con', 'mil_con', 'inf']:
                 inf[self.state][2] += 1
             if self.task == 'civ':
@@ -139,14 +144,15 @@ class ProdLine():
                 kill.append((self.task,self.state))
             
             self.progress -= cost
-                
-        print(self.state, self.task, 'progress', '{0:.2f}%'.format(self.progress/cost*100),
+        if debugg:
+            print(self.state, self.task, 'progress', '{0:.2f}%'.format(self.progress/cost*100),
             'civ', self.num_civ, 'inf {0:.2f}'.format(inf[self.state][0]), 
-            'mod {0:.2f}'.format(ref(unique_spd_mod[self.task], day)+ref(speed_mod, day)),
+            'mod {0:.2f}'.format(ref(unique_spd_modg[self.task], day)+ref(speed_mod, day)),
             'prog {0:.2f}'.format(self.progress), 'today {0:.2f}'.format(work), 'cost {0:.1f}'.format(cost))
                                         
     def init_task(self, task):
-        print('starting', task)
+        if debugg:
+            print('starting', task)
         self.task, self.state = task
 
 def inc_con_good(day):
@@ -154,8 +160,8 @@ def inc_con_good(day):
     goods ratio is actually 15.8%. Then, it seems the number of goods factories is rounded. e.g., Germany's starting
     goods factories is 9.48 (rounded to 9), then after they build one factory goods change to 9.638 (10)"""
     n_fac = daily_reports[-1]['civ'] + daily_reports[-1]['mil']
-    #print('old vs new goods', round((n_fac-1)*ref(con_goods, day)), round(n_fac*ref(con_goods,day)))
-    return round(n_fac*ref(con_goods,day)) > round((n_fac-1)*ref(con_goods, day))
+    #print('old vs new goods', round((n_fac-1)*ref(con_goodsg, day)), round(n_fac*ref(con_goodsg,day)))
+    return round(n_fac*ref(con_goodsg,day)) > round((n_fac-1)*ref(con_goodsg, day))
     
 def bld_civ(day):
     daily_reports[-1]['civ'] += 1
@@ -193,28 +199,37 @@ def add_mil_con():
     daily_reports[-1]['civ'] -= 1
     daily_reports[-1]['mil'] += 1
 
-def calculate(speed_modp, unique_spd_modp, unique_cost_modp, free_stuffp, space_modp, con_goodsp, 
-         daily_reportsp, infp, con_queuep, final_dayp):
+def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
+        unique_spd_mod = {'civ': [(1,0)], 'civ_con': [(1,0)], 'mil': [(1,0)], 'mil_con': [(1,0)],
+                           'ref': [(1,0)], 'inf': [(1,0)], 'doc': [(1,0)]}, 
+        unique_cost_mod = {'civ': [(1,1)], 'civ_con': [(1,1)], 'mil': [(1,1)], 'mil_con': [(1,1)],
+                            'ref': [(1,1)], 'inf': [(1,1)], 'doc': [(1,1)]}, 
+        free_stuff = {}, 
+        space_mod = [(1,1)],
+        con_goods = [(1,0)],
+        debug = False):
     global speed_mod
-    global unique_spd_mod
-    global unique_cost_mod
-    global free_stuff
-    global space_mod
-    global con_goods
+    global unique_spd_modg
+    global unique_cost_modg
+    global free_stuffg
+    global space_modg
+    global con_goodsg
     global daily_reports
     global inf
     global con_queue
     global final_day
+    global debugg
     speed_mod = speed_modp
-    unique_spd_mod = unique_spd_modp
-    unique_cost_mod = unique_cost_modp
-    free_stuff = free_stuffp
-    space_mod = space_modp
-    con_goods = con_goodsp
+    unique_spd_modg = unique_spd_mod
+    unique_cost_modg = unique_cost_mod
+    free_stuffg = free_stuff
+    space_modg = space_mod
+    con_goodsg = con_goods
     daily_reports = copy.deepcopy(daily_reportsp)
     inf = copy.deepcopy(infp)
     con_queue = copy.deepcopy(con_queuep)
     final_day = final_dayp
+    debugg = debug
 
     global temp_inf
     global prod_lines
@@ -223,7 +238,7 @@ def calculate(speed_modp, unique_spd_modp, unique_cost_modp, free_stuffp, space_
     prod_lines = [] #process back to front to avoid propogating effects of finishing civs
     kill = []
 
-    i = daily_reports[0]['civ']-int((daily_reports[0]['civ']+daily_reports[0]['mil'])*ref(con_goods,1))
+    i = daily_reports[0]['civ']-int((daily_reports[0]['civ']+daily_reports[0]['mil'])*ref(con_goodsg,1))
     while i > 0: #initialize prod_lines
         n = i if i < 15 else 15
         i -= 15
@@ -234,41 +249,43 @@ def calculate(speed_modp, unique_spd_modp, unique_cost_modp, free_stuffp, space_
 def execute():
     day = 1        
     while day <= final_day:
-        print('{0[1]} {0[2]} {0[0]}'.format(day_to_ymd(day+1)))
-        for thing in free_stuff:
-            if day in free_stuff[thing]:
+        if debugg:
+            print('{0[1]} {0[2]} {0[0]}'.format(day_to_ymd(day+1)))
+        for thing in free_stuffg:
+            if day in free_stuffg[thing]:
                 if thing == 'civ':
-                    for _ in range(free_stuff[thing][day]):
+                    for _ in range(free_stuffg[thing][day]):
                         bld_civ(day)
                         #print('civ', daily_reports[-1]['civ'])
                 elif thing == 'mil':
-                    for _ in range(free_stuff[thing][day]):
+                    for _ in range(free_stuffg[thing][day]):
                         add_mil(day)
                 elif thing == 'inf':
-                    for state in free_stuff[thing][day]:
-                        inf[state][0] += free_stuff[thing][day][state]*0.1
+                    for state in free_stuffg[thing][day]:
+                        inf[state][0] += free_stuffg[thing][day][state]*0.1
                         if inf[state][0] > 2:
-                            print('you made too much inf in', state)
+                            if debugg:
+                                print('you made too much inf in', state)
                             inf[state][0] = 2
                 else:
                     add_other(thing)
                     
         prev = 0
         p = 0
-        for p in range(1, len(con_goods)):
-            if con_goods[p][0] >= day:
+        for p in range(1, len(con_goodsg)):
+            if con_goodsg[p][0] >= day:
                 break
             prev = p
         if p != prev:
-            if con_goods[p][0] == day:
+            if con_goodsg[p][0] == day:
                 n_fac = daily_reports[-1]['civ'] + daily_reports[-1]['mil']
-                diff = int(n_fac*con_goods[p][1]) - int(n_fac*con_goods[prev][1])
+                diff = int(n_fac*con_goodsg[p][1]) - int(n_fac*con_goodsg[prev][1])
                 for _ in range(diff):
                     bld_civ(day)
                 for _ in range(diff*-1):
                     remove_civ()
             
-        if day%30==0:
+        if day%30==0 and debugg:
             print('report',daily_reports[-1])     #180               
         daily_reports.append(daily_reports[-1].copy())
         #don't make me program this for people who swap the order of production lines
@@ -294,7 +311,7 @@ def execute():
         for _ in range(num_civ):
             add_civ(day+1)
 
-        daily_reports[-1]['goods'] = round((daily_reports[-1]['mil']+daily_reports[-1]['civ'])*ref(con_goods,day))
+        daily_reports[-1]['goods'] = round((daily_reports[-1]['mil']+daily_reports[-1]['civ'])*ref(con_goodsg,day))
         day += 1
 
     return copy.deepcopy(daily_reports)
