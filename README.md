@@ -105,8 +105,8 @@ The above code produces the following output:
 
 | | 	1 inf then mil (1x con speed): mil |	1 inf then mil (2x con speed): mil |	mil (1x con speed): mil |	mil (2x con speed): mil |
 | - | - | -| - | - |
-|**integral of last 548 days** |	7755 |	16201 |	7699 |	15670 |
-|**integral of last 1096 days**| 	9924 |	21160 |	10086 |	20708 |
+|**area of last 548 days** |	7755 |	16201 |	7699 |	15670 |
+|**area of last 1096 days**| 	9924 |	21160 |	10086 |	20708 |
 
 - parameters include 0% consumer goods, and states with 100 building slots
 
@@ -121,3 +121,6 @@ Some of the other sccenarios I have analyzed:
 - parameters are designed to model Germany in 1936.
 
 All the code for these examples is provided in the jupyter notebooks.
+
+## Testing
+I tested this program by comparing it to my run of Germany through to March 5, 1937. There are probably hidden bugs.
