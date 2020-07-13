@@ -182,7 +182,8 @@ def remove_civ():
             i -= 1
         prod_lines[i].num_civ -= 1
     except:
-        pass
+        print('unable to remove civ factory')
+
 def add_mil(day):
     daily_reports[-1]['mil'] += 1
     if inc_con_good(day):
@@ -205,6 +206,7 @@ def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
         unique_cost_mod = {'civ': [(1,1)], 'civ_con': [(1,1)], 'mil': [(1,1)], 'mil_con': [(1,1)],
                             'ref': [(1,1)], 'inf': [(1,1)], 'doc': [(1,1)]}, 
         free_stuff = {}, 
+        trade = {},
         space_mod = [(1,1)],
         con_goods = [(1,0)],
         debug = False):
@@ -212,6 +214,7 @@ def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
     global unique_spd_modg
     global unique_cost_modg
     global free_stuffg
+    global tradeg
     global space_modg
     global con_goodsg
     global daily_reports
@@ -223,6 +226,7 @@ def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
     unique_spd_modg = unique_spd_mod
     unique_cost_modg = unique_cost_mod
     free_stuffg = free_stuff
+    tradeg = trade
     space_modg = space_mod
     con_goodsg = con_goods
     daily_reports = copy.deepcopy(daily_reportsp)
@@ -269,20 +273,28 @@ def execute():
                             inf[state][0] = 2
                 else:
                     add_other(thing)
-                    
+        
+        if day in tradeg:
+            for _ in range(tradeg[day]):
+                remove_civ()
+
         prev = 0
         p = 0
         for p in range(1, len(con_goodsg)):
             if con_goodsg[p][0] >= day:
                 break
             prev = p
+
+        #account for con good ratio change
         if p != prev:
             if con_goodsg[p][0] == day:
                 n_fac = daily_reports[-1]['civ'] + daily_reports[-1]['mil']
                 diff = int(n_fac*con_goodsg[p][1]) - int(n_fac*con_goodsg[prev][1])
-                for _ in range(diff):
-                    bld_civ(day)
+                if debugg:
+                    print('civ for goods change:',diff)
                 for _ in range(diff*-1):
+                    bld_civ(day)
+                for _ in range(diff):
                     remove_civ()
             
         if day%30==0 and debugg:
