@@ -156,24 +156,34 @@ class ProdLine():
         self.task, self.state = task
 
 def inc_con_good(day):
-    """It appears that the game calculates consumer goods to at least 1/10 precision, so Germany's starting consumer
-    goods ratio is actually 15.8%. Then, it seems the number of goods factories is rounded. e.g., Germany's starting
-    goods factories is 9.48 (rounded to 9), then after they build one factory goods change to 9.638 (10)"""
+    """
+    It appears that the game only updates consumer good changes due to small stability increases monthly.
+    Hiring a stability advisor will have an immediate effect, but improving worker conditions only
+    updates consumer goods monthly.
+    consumer_goods_factories = integer_floor(factories * non_stability_modifiers 
+    - factories * (stability - 50%) * 2 * 0.05)
+    where stability is only effective above 50%"""
     n_fac = daily_reports[-1]['civ'] + daily_reports[-1]['mil']
-    #print('old vs new goods', round((n_fac-1)*ref(con_goodsg, day)), round(n_fac*ref(con_goodsg,day)))
-    return round(n_fac*ref(con_goodsg,day)) > round((n_fac-1)*ref(con_goodsg, day))
+    goods_ratio = ref(con_goodsg, day)
+    if debugg:
+        print('civ for goods from:',int((n_fac-1)*goods_ratio),
+        'to:', int(n_fac*goods_ratio), 'tot civ:', daily_reports[-1]['civ'],
+        'ratio', goods_ratio)
+    return int(n_fac*goods_ratio) > int((n_fac-1)*goods_ratio)
     
 def bld_civ(day):
     daily_reports[-1]['civ'] += 1
-
+    #print('bld civ')
     if not inc_con_good(day):
         add_civ(day)
 
 def add_civ(day):
     if len(prod_lines) != 0 and prod_lines[-1].num_civ < 15:
         prod_lines[-1].num_civ += 1
+        #print('old line')
     else:
         prod_lines.append(ProdLine(find_task(day), 1))
+        #print('new line')
 
 def remove_civ():
     try:
@@ -182,7 +192,8 @@ def remove_civ():
             i -= 1
         prod_lines[i].num_civ -= 1
     except:
-        pass
+        print('unable to remove civ factory')
+
 def add_mil(day):
     daily_reports[-1]['mil'] += 1
     if inc_con_good(day):
@@ -205,6 +216,8 @@ def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
         unique_cost_mod = {'civ': [(1,1)], 'civ_con': [(1,1)], 'mil': [(1,1)], 'mil_con': [(1,1)],
                             'ref': [(1,1)], 'inf': [(1,1)], 'doc': [(1,1)]}, 
         free_stuff = {}, 
+        in_trade = [(1,0)],
+        out_trade = {},
         space_mod = [(1,1)],
         con_goods = [(1,0)],
         debug = False):
@@ -212,6 +225,8 @@ def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
     global unique_spd_modg
     global unique_cost_modg
     global free_stuffg
+    global in_tradeg
+    global out_tradeg
     global space_modg
     global con_goodsg
     global daily_reports
@@ -223,6 +238,8 @@ def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
     unique_spd_modg = unique_spd_mod
     unique_cost_modg = unique_cost_mod
     free_stuffg = free_stuff
+    in_tradeg = in_trade
+    out_tradeg = out_trade
     space_modg = space_mod
     con_goodsg = con_goods
     daily_reports = copy.deepcopy(daily_reportsp)
@@ -242,6 +259,7 @@ def calculate(daily_reportsp, con_queuep, infp, final_dayp, speed_modp,
     while i > 0: #initialize prod_lines
         n = i if i < 15 else 15
         i -= 15
+        #print('n',n)
         prod_lines.append(ProdLine(find_task(1), n))
 
     return execute()
@@ -251,6 +269,8 @@ def execute():
     while day <= final_day:
         if debugg:
             print('{0[1]} {0[2]} {0[0]}'.format(day_to_ymd(day+1)))
+
+        #account for free stuff
         for thing in free_stuffg:
             if day in free_stuffg[thing]:
                 if thing == 'civ':
@@ -269,25 +289,64 @@ def execute():
                             inf[state][0] = 2
                 else:
                     add_other(thing)
-                    
+        
+        #account for trade
+        if day in out_tradeg:
+            for _ in range(out_tradeg[day]):
+                if debugg:
+                    print('traded a civ')
+                remove_civ()
+            for _ in range(out_tradeg[day]*-1):
+                if debugg:
+                    print('stopped trading a civ')
+                add_civ(day)
+        
+        prev = 0
+        p = 0
+        for p in range(1, len(in_tradeg)):
+            if in_tradeg[p][0] >= day:
+                break
+            prev = p
+
+        if p != prev:
+            if in_tradeg[p][0] == day:
+                diff = in_tradeg[p][1] - in_tradeg[prev][1]
+                ratio = ref(con_goodsg,day)
+                for _ in range(diff):
+                    bld_civ(day)
+                for _ in range(diff*-1):
+                    daily_reports[-1]['civ'] -= 1
+                    n_fac = daily_reports[-1]['civ'] + daily_reports[-1]['mil']
+                    if int(ratio*n_fac) == int(ratio*(n_fac+1)):
+                        remove_civ()
+
+                if debugg:
+                    print('trade civ from:', in_tradeg[prev][1],
+                    'to:', in_tradeg[p][1], 'tot civ:', daily_reports[-1]['civ'])
+        #account for con good ratio change
         prev = 0
         p = 0
         for p in range(1, len(con_goodsg)):
             if con_goodsg[p][0] >= day:
                 break
             prev = p
+
         if p != prev:
             if con_goodsg[p][0] == day:
                 n_fac = daily_reports[-1]['civ'] + daily_reports[-1]['mil']
                 diff = int(n_fac*con_goodsg[p][1]) - int(n_fac*con_goodsg[prev][1])
-                for _ in range(diff):
-                    bld_civ(day)
+                if debugg:
+                    print('civ for goods from:',int(n_fac*con_goodsg[prev][1]),
+                    'to:', int(n_fac*con_goodsg[p][1]), 'tot civ:', daily_reports[-1]['civ'])
                 for _ in range(diff*-1):
+                    add_civ(day)
+                for _ in range(diff):
                     remove_civ()
-            
-        if day%30==0 and debugg:
-            print('report',daily_reports[-1])     #180               
+                #daily_reports[-1]['goods'] = int(n_fac*con_goodsg[p][1])
+                       
         daily_reports.append(daily_reports[-1].copy())
+
+        #construction phase
         #don't make me program this for people who swap the order of production lines
         for line_i in range(len(prod_lines))[::-1]:
             prod_lines[line_i].construct(day)
@@ -311,7 +370,10 @@ def execute():
         for _ in range(num_civ):
             add_civ(day+1)
 
-        daily_reports[-1]['goods'] = round((daily_reports[-1]['mil']+daily_reports[-1]['civ'])*ref(con_goodsg,day))
+        num_fac = daily_reports[-1]['mil']+daily_reports[-1]['civ']
+        daily_reports[-1]['goods'] = int(num_fac*ref(con_goodsg,day))
         day += 1
+        if debugg:
+            print('report',daily_reports[-1])
 
     return copy.deepcopy(daily_reports)
