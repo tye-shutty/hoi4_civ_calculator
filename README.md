@@ -2,6 +2,8 @@
 
 Hearts of Iron 4 is a strategy game requiring the player to create a military-industrial complex. This program models the construction part of hoi4 to help players compare different strategies.
 
+The image below graphs the number of military factories the USSR has each month starting January 1936. This program also helps users calculate the area under the graph to find which strategies result in the most military production.
+
 ![alt text](https://raw.githubusercontent.com/tye-shutty/hoi4_civ_calculator/master/graphs/ussr.png)
 - parameters are designed to model the USSR from 1936 to mid 1941.
 
